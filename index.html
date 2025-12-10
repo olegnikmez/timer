@@ -22,6 +22,11 @@
             user-select: none;
             -webkit-tap-highlight-color: transparent;
             background-color: #111827; /* bg-gray-900 */
+            /* CRITICAL FIX: Используем dynamic viewport height для мобильных браузеров */
+            height: 100vh;
+            height: 100dvh; 
+            width: 100vw;
+            overflow: hidden;
         }
         /* Анимации */
         @keyframes fade-in {
@@ -45,7 +50,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white h-screen w-screen overflow-hidden">
+<body class="bg-gray-900 text-white">
     <div id="root" class="h-full w-full"></div>
 
     <script type="text/babel">
@@ -559,7 +564,7 @@
 
             if (mode === 'timer') {
                 return (
-                    <div className="flex flex-col h-screen w-full overflow-hidden transition-colors duration-700 relative"
+                    <div className="flex flex-col h-full w-full overflow-hidden transition-colors duration-700 relative"
                         style={{ backgroundColor: status !== 'idle' && status !== 'finished' ? `${currentInterval.color}20` : '#111827' }}>
                         
                         <div className="flex justify-between items-center p-6 safe-top z-10 flex-shrink-0">
@@ -620,7 +625,7 @@
                         </div>
 
                         {/* Controls - Always visible, never shrinks */}
-                        <div className="pb-8 pt-4 flex justify-center items-center gap-6 safe-bottom z-10 w-full flex-shrink-0 bg-gray-900/10 backdrop-blur-sm">
+                        <div className="pb-6 pt-4 flex justify-center items-center gap-6 safe-bottom z-10 w-full flex-shrink-0 bg-gray-900/10 backdrop-blur-sm">
                             {/* SKIP BACK */}
                             <button onClick={handleSkipBackward} className="w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition text-blue-400">
                                 <SkipBack size={24} fill="currentColor" />
@@ -651,7 +656,7 @@
             }
 
             return (
-                <div className="flex flex-col h-screen w-full bg-gray-900 text-white font-sans overflow-hidden">
+                <div className="flex flex-col h-full w-full bg-gray-900 text-white font-sans overflow-hidden">
                     <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 sticky top-0 z-30 safe-top shadow-md">
                         <h1 className="text-xl font-bold">Настройки</h1>
                         <button onClick={() => { setIsSchemeListOpen(false); setMode('timer'); }} className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-full flex items-center font-medium transition text-sm"><Check size={16} className="mr-2" /> Готово</button>
