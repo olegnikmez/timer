@@ -132,7 +132,20 @@
             } catch (err) {}
         };
 
-        // --- SOUND ENGINE ---
+        // --- SOUND ENGINE (FIXED: SINGLETON CONTEXT) ---
+        // Создаем глобальную переменную для контекста
+        let sharedAudioCtx = null;
+
+        const getAudioContext = () => {
+            if (!sharedAudioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    sharedAudioCtx = new AudioContext();
+                }
+            }
+            return sharedAudioCtx;
+        };
+
         const playSound = (type, customBlobUrl = null) => {
             if (type === 'custom' && customBlobUrl) {
                 const audio = new Audio(customBlobUrl);
@@ -140,9 +153,15 @@
                 return;
             }
 
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            const ctx = new AudioContext();
+            // Используем общий контекст вместо создания нового
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            
+            // Если контекст "спит" (браузеры останавливают его при неактивности), будим его
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.connect(gain);
