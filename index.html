@@ -21,6 +21,7 @@
             -webkit-user-select: none;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            background-color: #111827; /* bg-gray-900 */
         }
         /* Анимации */
         @keyframes fade-in {
@@ -35,14 +36,13 @@
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
-<body class="bg-gray-900 text-white h-screen overflow-hidden">
-    <div id="root" class="h-full"></div>
+<body class="bg-gray-900 text-white h-screen w-screen overflow-hidden">
+    <div id="root" class="h-full w-full"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
-        // --- ВСТРОЕННЫЕ ИКОНКИ (Замена внешней библиотеке Lucide) ---
-        // Это решает проблему "ReferenceError: lucideReact is not defined"
+        // --- ВСТРОЕННЫЕ ИКОНКИ ---
         const Icons = {
             Play: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
             Pause: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>,
@@ -54,10 +54,16 @@
             Music: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>,
             Check: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
             X: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
-            Upload: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Upload: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
+            ArrowUp: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>,
+            ArrowDown: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>,
+            Copy: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>,
+            SkipForward: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>,
+            List: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>,
+            Edit: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
         };
 
-        const { Play, Pause, RotateCcw, Plus, Trash2, Settings, Volume2, Music, Check, X, Upload } = Icons;
+        const { Play, Pause, RotateCcw, Plus, Trash2, Settings, Volume2, Music, Check, X, Upload, ArrowUp, ArrowDown, Copy, SkipForward, List, Edit } = Icons;
 
         // --- DATABASE UTILS (IndexedDB) ---
         const DB_NAME = 'ChronoFlexAudioDB';
@@ -190,68 +196,163 @@
         };
 
         const formatTime = (seconds) => {
-            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const s = (seconds % 60).toString().padStart(2, '0');
+            const safeSeconds = Number(seconds) || 0;
+            const m = Math.floor(safeSeconds / 60).toString().padStart(2, '0');
+            const s = (safeSeconds % 60).toString().padStart(2, '0');
             return `${m}:${s}`;
         };
 
         // --- MAIN APP COMPONENT ---
         function ChronoFlexTimer() {
-            const [intervals, setIntervals] = useState(() => {
-                const saved = localStorage.getItem('chrono_intervals');
-                if (saved) {
-                    try { return JSON.parse(saved); } catch (e) {}
+            // --- STATE MANAGEMENT WITH SCHEMES ---
+            
+            // 1. Инициализация Схем
+            const [schemes, setSchemes] = useState(() => {
+                const savedSchemes = localStorage.getItem('chrono_schemes');
+                if (savedSchemes) {
+                    try { return JSON.parse(savedSchemes); } catch (e) {}
                 }
-                return [
+                
+                // Миграция данных старых пользователей
+                const oldIntervals = localStorage.getItem('chrono_intervals');
+                const oldCycles = localStorage.getItem('chrono_cycles');
+                
+                const defaultIntervals = [
                     { id: 1, name: 'Разминка', duration: 10, color: '#10b981', soundType: 'low', customUrl: null },
                     { id: 2, name: 'Работа', duration: 30, color: '#ef4444', soundType: 'bell', customUrl: null },
                     { id: 3, name: 'Отдых', duration: 15, color: '#3b82f6', soundType: 'low', customUrl: null }
                 ];
+
+                const initialScheme = {
+                    id: Date.now(),
+                    name: 'Моя тренировка',
+                    cycles: oldCycles ? parseInt(oldCycles) : 1,
+                    intervals: oldIntervals ? JSON.parse(oldIntervals) : defaultIntervals
+                };
+
+                return [initialScheme];
             });
 
-            const [cycles, setCycles] = useState(() => {
-                const saved = localStorage.getItem('chrono_cycles');
-                return saved ? parseInt(saved, 10) : 1;
+            // 2. Инициализация активной схемы
+            const [activeSchemeId, setActiveSchemeId] = useState(() => {
+                const lastId = localStorage.getItem('chrono_active_scheme_id');
+                // Проверяем, существует ли схема с таким ID
+                if (lastId) {
+                    // Так как мы пока не можем обратиться к state `schemes` внутри инициализатора,
+                    // мы доверяем ID, но сделаем проверку в рендере или useEffect
+                    return parseInt(lastId);
+                }
+                return null; // Будет установлено в useEffect
             });
 
+            // Вычисляемая активная схема. Если ID некорректен, берем первую.
+            const activeScheme = schemes.find(s => s.id === activeSchemeId) || schemes[0];
+            
+            // Синхронизация: если activeSchemeId был null или неверный, обновляем его
+            useEffect(() => {
+                if (!activeSchemeId || !schemes.find(s => s.id === activeSchemeId)) {
+                    setActiveSchemeId(schemes[0].id);
+                }
+            }, [schemes, activeSchemeId]);
+
+            // Сохранение в LocalStorage
+            useEffect(() => {
+                // Сохраняем схемы без blob url
+                const schemesToSave = schemes.map(scheme => ({
+                    ...scheme,
+                    intervals: scheme.intervals.map(i => ({ ...i, customUrl: null }))
+                }));
+                localStorage.setItem('chrono_schemes', JSON.stringify(schemesToSave));
+                localStorage.setItem('chrono_active_scheme_id', activeScheme.id.toString());
+            }, [schemes, activeScheme]);
+
+
+            // --- Helper Functions для управления схемами ---
+
+            const updateActiveScheme = (updates) => {
+                setSchemes(prevSchemes => 
+                    prevSchemes.map(s => s.id === activeScheme.id ? { ...s, ...updates } : s)
+                );
+            };
+
+            const addNewScheme = () => {
+                const newId = Date.now();
+                const newScheme = {
+                    id: newId,
+                    name: `Тренировка ${schemes.length + 1}`,
+                    cycles: 1,
+                    intervals: [
+                        { id: Date.now() + 1, name: 'Работа', duration: 30, color: '#ef4444', soundType: 'bell', customUrl: null },
+                        { id: Date.now() + 2, name: 'Отдых', duration: 15, color: '#3b82f6', soundType: 'low', customUrl: null }
+                    ]
+                };
+                setSchemes([...schemes, newScheme]);
+                setActiveSchemeId(newId);
+                resetTimer(); // Сбрасываем таймер при смене схемы
+            };
+
+            const deleteActiveScheme = () => {
+                if (schemes.length <= 1) return; // Нельзя удалить последнюю
+                const newSchemes = schemes.filter(s => s.id !== activeScheme.id);
+                setSchemes(newSchemes);
+                setActiveSchemeId(newSchemes[0].id);
+                resetTimer();
+            };
+
+            const switchScheme = (id) => {
+                setActiveSchemeId(id);
+                resetTimer();
+            };
+
+            // --- ОБЫЧНЫЙ STATE ТАЙМЕРА (Сбрасывается при смене схемы) ---
             const [currentCycle, setCurrentCycle] = useState(1);
             const [currentIntervalIndex, setCurrentIntervalIndex] = useState(0);
-            const [timeLeft, setTimeLeft] = useState(intervals[0]?.duration || 0);
+            const [timeLeft, setTimeLeft] = useState(0);
             const [status, setStatus] = useState('idle');
             const [mode, setMode] = useState('timer');
+            const [isSchemeListOpen, setIsSchemeListOpen] = useState(false); // Для выпадающего списка схем
 
             const endTimeRef = useRef(null);
             const rafRef = useRef(null);
             const wakeLockRef = useRef(null);
 
+            // Эффект обновления времени при смене активной схемы/интервалов
+            useEffect(() => {
+                if (status === 'idle') {
+                    const firstInterval = activeScheme.intervals[0];
+                    setTimeLeft(firstInterval ? (Number(firstInterval.duration) || 0) : 0);
+                }
+            }, [activeScheme, status]);
+
+
+            // Восстановление аудио для ВСЕХ интервалов текущей схемы
             useEffect(() => {
                 const restoreAudio = async () => {
-                    const updatedIntervals = [...intervals];
                     let hasChanges = false;
-                    for (let i = 0; i < updatedIntervals.length; i++) {
-                        if (updatedIntervals[i].soundType === 'custom') {
-                            const fileBlob = await getAudioFromDB(updatedIntervals[i].id);
+                    const updatedSchemes = [...schemes];
+                    const schemeIndex = updatedSchemes.findIndex(s => s.id === activeScheme.id);
+                    if (schemeIndex === -1) return;
+
+                    const currentIntervals = [...updatedSchemes[schemeIndex].intervals];
+
+                    for (let i = 0; i < currentIntervals.length; i++) {
+                        if (currentIntervals[i].soundType === 'custom' && !currentIntervals[i].customUrl) {
+                            const fileBlob = await getAudioFromDB(currentIntervals[i].id);
                             if (fileBlob) {
-                                updatedIntervals[i].customUrl = URL.createObjectURL(fileBlob);
+                                currentIntervals[i].customUrl = URL.createObjectURL(fileBlob);
                                 hasChanges = true;
-                            } else {
-                                updatedIntervals[i].soundType = 'low';
                             }
                         }
                     }
-                    if (hasChanges) setIntervals(updatedIntervals);
+                    
+                    if (hasChanges) {
+                        updatedSchemes[schemeIndex].intervals = currentIntervals;
+                        setSchemes(updatedSchemes);
+                    }
                 };
                 restoreAudio();
-            }, []);
+            }, [activeSchemeId]); // Запускаем при смене схемы
 
-            useEffect(() => {
-                const toSave = intervals.map(i => ({ ...i, customUrl: null }));
-                localStorage.setItem('chrono_intervals', JSON.stringify(toSave));
-            }, [intervals]);
-
-            useEffect(() => {
-                localStorage.setItem('chrono_cycles', cycles.toString());
-            }, [cycles]);
 
             const requestWakeLock = async () => {
                 try { if ('wakeLock' in navigator) wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch (err) {}
@@ -261,9 +362,12 @@
                 if (status === 'finished') { resetTimer(); return; }
                 setStatus('running');
                 requestWakeLock();
-                endTimeRef.current = Date.now() + (timeLeft * 1000);
-                if (timeLeft === intervals[currentIntervalIndex].duration) {
-                    const current = intervals[currentIntervalIndex];
+                endTimeRef.current = Date.now() + (Number(timeLeft) || 0) * 1000;
+                
+                // Проигрываем звук если это начало
+                const originalDuration = Number(activeScheme.intervals[currentIntervalIndex].duration) || 0;
+                if (timeLeft === originalDuration) {
+                    const current = activeScheme.intervals[currentIntervalIndex];
                     playSound(current.soundType, current.customUrl);
                 }
             };
@@ -279,7 +383,17 @@
                 setStatus('idle');
                 setCurrentCycle(1);
                 setCurrentIntervalIndex(0);
-                setTimeLeft(intervals[0].duration);
+                // Timeleft обновится через useEffect
+            };
+
+            const addSeconds = (amount) => {
+                setTimeLeft(prev => {
+                    const newVal = prev + amount;
+                    if (status === 'running') {
+                        endTimeRef.current += amount * 1000;
+                    }
+                    return newVal;
+                });
             };
 
             const tick = useCallback(() => {
@@ -292,7 +406,7 @@
 
                 if (remainingMs <= 0) handleIntervalComplete();
                 else rafRef.current = requestAnimationFrame(tick);
-            }, [status, timeLeft, intervals]);
+            }, [status, timeLeft, activeScheme]); // Dependency on activeScheme instead of intervals
 
             useEffect(() => {
                 if (status === 'running') rafRef.current = requestAnimationFrame(tick);
@@ -301,19 +415,21 @@
 
             const handleIntervalComplete = () => {
                 const nextIndex = currentIntervalIndex + 1;
+                const intervals = activeScheme.intervals;
+                
                 if (nextIndex < intervals.length) {
                     setCurrentIntervalIndex(nextIndex);
                     const nextInterval = intervals[nextIndex];
-                    setTimeLeft(nextInterval.duration);
-                    endTimeRef.current = Date.now() + (nextInterval.duration * 1000);
+                    setTimeLeft(Number(nextInterval.duration) || 0);
+                    endTimeRef.current = Date.now() + (Number(nextInterval.duration) || 0) * 1000;
                     playSound(nextInterval.soundType, nextInterval.customUrl);
                 } else {
-                    if (currentCycle < cycles) {
+                    if (currentCycle < activeScheme.cycles) {
                         setCurrentCycle(c => c + 1);
                         setCurrentIntervalIndex(0);
                         const first = intervals[0];
-                        setTimeLeft(first.duration);
-                        endTimeRef.current = Date.now() + (first.duration * 1000);
+                        setTimeLeft(Number(first.duration) || 0);
+                        endTimeRef.current = Date.now() + (Number(first.duration) || 0) * 1000;
                         playSound(first.soundType, first.customUrl);
                     } else {
                         setStatus('finished');
@@ -323,63 +439,123 @@
                 }
             };
 
+            // --- Scheme Data Modifiers (Wrapped activeScheme updaters) ---
+
             const addInterval = () => {
                 const newId = Date.now();
-                setIntervals([...intervals, { id: newId, name: 'Новый этап', duration: 30, color: '#6366f1', soundType: 'low', customUrl: null }]);
+                const newIntervals = [...activeScheme.intervals, { 
+                    id: newId, 
+                    name: 'Новый этап', 
+                    duration: 30, 
+                    color: '#6366f1', 
+                    soundType: 'low', 
+                    customUrl: null 
+                }];
+                updateActiveScheme({ intervals: newIntervals });
             };
 
             const removeInterval = (id) => {
-                if (intervals.length > 1) {
-                    setIntervals(intervals.filter(i => i.id !== id));
+                if (activeScheme.intervals.length > 1) {
+                    const newIntervals = activeScheme.intervals.filter(i => i.id !== id);
+                    updateActiveScheme({ intervals: newIntervals });
                     deleteAudioFromDB(id);
                 }
             };
 
-            const updateInterval = (id, field, value) => {
-                setIntervals(intervals.map(i => i.id === id ? { ...i, [field]: value } : i));
+            const duplicateInterval = (id) => {
+                const index = activeScheme.intervals.findIndex(i => i.id === id);
+                if (index === -1) return;
+                const source = activeScheme.intervals[index];
+                const newInterval = { ...source, id: Date.now(), name: source.name + ' (Копия)' };
+                const newIntervals = [...activeScheme.intervals];
+                newIntervals.splice(index + 1, 0, newInterval);
+                updateActiveScheme({ intervals: newIntervals });
+            };
+
+            const moveInterval = (index, direction) => {
+                if (direction === -1 && index === 0) return;
+                if (direction === 1 && index === activeScheme.intervals.length - 1) return;
+                const newIntervals = [...activeScheme.intervals];
+                const temp = newIntervals[index];
+                newIntervals[index] = newIntervals[index + direction];
+                newIntervals[index + direction] = temp;
+                updateActiveScheme({ intervals: newIntervals });
+            };
+
+            const updateIntervalData = (id, field, value) => {
+                const newIntervals = activeScheme.intervals.map(i => i.id === id ? { ...i, [field]: value } : i);
+                updateActiveScheme({ intervals: newIntervals });
             };
 
             const handleFileUpload = async (id, file) => {
                 if (file) {
                     await saveAudioToDB(id, file);
                     const url = URL.createObjectURL(file);
-                    setIntervals(intervals.map(i => i.id === id ? { ...i, soundType: 'custom', customUrl: url } : i));
+                    const newIntervals = activeScheme.intervals.map(i => i.id === id ? { ...i, soundType: 'custom', customUrl: url } : i);
+                    updateActiveScheme({ intervals: newIntervals });
                 }
             };
 
-            const currentInterval = intervals[currentIntervalIndex];
-            const progressPercent = status === 'idle' ? 100 : (timeLeft / currentInterval.duration) * 100;
+
+            const currentInterval = activeScheme.intervals[currentIntervalIndex] || {};
+            const safeDuration = Number(currentInterval.duration) || 1; 
+            const progressPercent = status === 'idle' ? 100 : (timeLeft / safeDuration) * 100;
+
+            // --- RENDER ---
 
             if (mode === 'timer') {
                 return (
-                    <div className="flex flex-col h-screen overflow-hidden transition-colors duration-700"
+                    <div className="flex flex-col h-screen w-full overflow-hidden transition-colors duration-700 relative"
                         style={{ backgroundColor: status !== 'idle' && status !== 'finished' ? `${currentInterval.color}20` : '#111827' }}>
                         
-                        <div className="flex justify-between items-center p-6 safe-top">
-                            <div className="text-sm font-medium opacity-70 tracking-widest uppercase">Цикл {currentCycle} / {cycles}</div>
+                        <div className="flex justify-between items-center p-6 safe-top z-10">
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold uppercase tracking-widest text-gray-400">{activeScheme.name}</span>
+                                <div className="text-sm font-medium opacity-70 tracking-widest uppercase">Цикл {currentCycle} / {activeScheme.cycles}</div>
+                            </div>
                             <button onClick={() => { resetTimer(); setMode('edit'); }} className="p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition"><Settings size={20} /></button>
                         </div>
 
-                        <div className="flex-1 flex flex-col items-center justify-center relative">
+                        <div className="flex-1 flex flex-col items-center justify-center relative z-0">
                             <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-                                <div className="w-80 h-80 rounded-full border-8 transition-colors duration-500" style={{ borderColor: currentInterval.color }}></div>
+                                <div className="w-80 h-80 rounded-full border-8 transition-colors duration-500" style={{ borderColor: currentInterval.color || '#333' }}></div>
                             </div>
                             <h2 className="text-3xl font-light mb-4 text-center px-4 animate-fade-in">{status === 'finished' ? 'Тренировка завершена!' : currentInterval.name}</h2>
-                            <div className="text-9xl font-bold tracking-tighter tabular-nums mb-8 drop-shadow-2xl" style={{ color: status === 'finished' ? '#10b981' : currentInterval.color }}>{formatTime(timeLeft)}</div>
-                            {status !== 'finished' && (
-                                <div className="text-gray-400 text-sm bg-gray-800/50 px-4 py-2 rounded-full backdrop-blur-sm">Далее: {intervals[(currentIntervalIndex + 1) % intervals.length].name}</div>
+                            <div className="text-9xl font-bold tracking-tighter tabular-nums mb-4 drop-shadow-2xl" style={{ color: status === 'finished' ? '#10b981' : currentInterval.color }}>{formatTime(timeLeft)}</div>
+                            
+                            <div className="flex gap-3 mb-6">
+                                {[1, 2, 3, 5].map(sec => (
+                                    <button 
+                                        key={sec}
+                                        onClick={() => addSeconds(sec)}
+                                        className="px-4 py-2 bg-gray-800/50 hover:bg-gray-700 rounded-full text-sm font-bold backdrop-blur-sm border border-gray-700/50 transition-all active:scale-95"
+                                    >
+                                        +{sec}с
+                                    </button>
+                                ))}
+                            </div>
+
+                            {status !== 'finished' && activeScheme.intervals.length > 0 && (
+                                <div className="text-gray-400 text-sm bg-gray-800/50 px-4 py-2 rounded-full backdrop-blur-sm">Далее: {activeScheme.intervals[(currentIntervalIndex + 1) % activeScheme.intervals.length].name}</div>
                             )}
                         </div>
 
-                        <div className="p-8 pb-12 flex justify-center gap-6 safe-bottom">
+                        <div className="p-8 pb-12 flex justify-center items-center gap-6 safe-bottom z-10">
                             {status === 'running' ? (
                                 <button onClick={pauseTimer} className="w-20 h-20 bg-yellow-500 rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition"><Pause size={32} fill="currentColor" className="text-black" /></button>
                             ) : (
                                 <button onClick={startTimer} className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition"><Play size={32} fill="currentColor" className="ml-1 text-black" /></button>
                             )}
-                            <button onClick={resetTimer} className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition"><RotateCcw size={28} /></button>
+                            
+                            <button onClick={handleIntervalComplete} className="w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition text-blue-400">
+                                <SkipForward size={24} fill="currentColor" />
+                            </button>
+
+                            <button onClick={resetTimer} className="w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition">
+                                <RotateCcw size={24} />
+                            </button>
                         </div>
-                        <div className="h-2 bg-gray-800 w-full relative">
+                        <div className="h-2 bg-gray-800 w-full relative z-10">
                             <div className="h-full transition-all duration-100 ease-linear" style={{ width: `${progressPercent}%`, backgroundColor: currentInterval.color }} />
                         </div>
                     </div>
@@ -387,48 +563,132 @@
             }
 
             return (
-                <div className="flex flex-col h-screen bg-gray-900 text-white font-sans">
-                    <div className="p-6 pb-2 border-b border-gray-800 flex justify-between items-center bg-gray-900 sticky top-0 z-10 safe-top">
-                        <h1 className="text-2xl font-bold">Настройки</h1>
-                        <button onClick={() => setMode('timer')} className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-full flex items-center font-medium transition"><Check size={18} className="mr-2" /> Готово</button>
+                <div className="flex flex-col h-screen w-full bg-gray-900 text-white font-sans overflow-hidden">
+                    <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 sticky top-0 z-30 safe-top shadow-md">
+                        <h1 className="text-xl font-bold">Настройки</h1>
+                        <button onClick={() => { setIsSchemeListOpen(false); setMode('timer'); }} className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-full flex items-center font-medium transition text-sm"><Check size={16} className="mr-2" /> Готово</button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6 safe-bottom">
-                        <div className="bg-gray-800 p-5 rounded-2xl">
-                            <label className="text-gray-400 text-xs uppercase tracking-wider font-bold mb-2 block">Циклы</label>
-                            <div className="flex items-center gap-4">
-                                <input type="range" min="1" max="99" value={cycles} onChange={(e) => setCycles(parseInt(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                                <div className="text-2xl font-bold w-16 text-center bg-gray-900 rounded-lg py-1">{cycles}</div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-40 safe-bottom">
+                        
+                        {/* SCHEME SELECTOR */}
+                        <div className="bg-gray-800 rounded-2xl p-2 relative z-20">
+                             <div 
+                                className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-700/50 rounded-xl transition"
+                                onClick={() => setIsSchemeListOpen(!isSchemeListOpen)}
+                             >
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className="p-2 bg-blue-600 rounded-lg"><List size={20}/></div>
+                                    <div className="flex flex-col overflow-hidden">
+                                        <span className="text-xs text-gray-400 font-bold uppercase">Активная схема</span>
+                                        <span className="font-bold truncate text-white">{activeScheme.name}</span>
+                                    </div>
+                                </div>
+                                <div className={`transform transition-transform ${isSchemeListOpen ? 'rotate-180' : ''}`}><ArrowDown size={16}/></div>
+                             </div>
+
+                             {isSchemeListOpen && (
+                                 <div className="mt-2 border-t border-gray-700 pt-2 flex flex-col gap-1 max-h-60 overflow-y-auto">
+                                     {schemes.map(scheme => (
+                                         <div key={scheme.id} className={`p-3 rounded-lg flex justify-between items-center ${scheme.id === activeScheme.id ? 'bg-blue-900/30 text-blue-300' : 'hover:bg-gray-700'}`}>
+                                             <button className="flex-1 text-left font-medium" onClick={() => { switchScheme(scheme.id); setIsSchemeListOpen(false); }}>{scheme.name}</button>
+                                             {scheme.id === activeScheme.id && <Check size={16} className="text-blue-500"/>}
+                                         </div>
+                                     ))}
+                                     <button 
+                                        onClick={() => { addNewScheme(); setIsSchemeListOpen(false); }}
+                                        className="p-3 mt-2 rounded-lg border border-dashed border-gray-600 text-center text-gray-400 hover:border-blue-500 hover:text-blue-500 transition text-sm font-medium"
+                                     >
+                                         + Создать новую схему
+                                     </button>
+                                 </div>
+                             )}
+                        </div>
+
+                        {/* SCHEME PROPERTIES */}
+                        <div className="bg-gray-800/50 p-4 rounded-2xl border border-gray-700/50">
+                            <div className="flex gap-2 mb-4">
+                                <div className="flex-1">
+                                    <label className="text-gray-500 text-xs uppercase tracking-wider font-bold mb-1 block">Название схемы</label>
+                                    <div className="flex items-center bg-gray-900 rounded-lg px-3 py-2">
+                                        <Edit size={16} className="text-gray-500 mr-2"/>
+                                        <input 
+                                            type="text" 
+                                            value={activeScheme.name} 
+                                            onChange={(e) => updateActiveScheme({ name: e.target.value })} 
+                                            className="bg-transparent w-full focus:outline-none font-bold text-white"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-end">
+                                    <button 
+                                        onClick={deleteActiveScheme} 
+                                        disabled={schemes.length <= 1}
+                                        className={`p-3 rounded-lg ${schemes.length <= 1 ? 'bg-gray-700 text-gray-500' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}
+                                    >
+                                        <Trash2 size={20} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-900 rounded-xl p-4">
+                                <label className="text-gray-400 text-xs uppercase tracking-wider font-bold mb-3 block">Количество циклов</label>
+                                <div className="flex items-center gap-4">
+                                    <input 
+                                        type="range" 
+                                        min="1" 
+                                        max="99" 
+                                        value={activeScheme.cycles} 
+                                        onChange={(e) => updateActiveScheme({ cycles: parseInt(e.target.value) })} 
+                                        className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" 
+                                    />
+                                    <div className="text-2xl font-bold w-16 text-center bg-gray-800 rounded-lg py-1">{activeScheme.cycles}</div>
+                                </div>
                             </div>
                         </div>
 
+                        {/* INTERVALS LIST */}
                         <div className="space-y-4">
                             <div className="flex justify-between items-end px-1"><span className="text-gray-400 text-xs uppercase tracking-wider font-bold">Интервалы</span></div>
-                            {intervals.map((interval, index) => (
+                            {activeScheme.intervals.map((interval, index) => (
                                 <div key={interval.id} className="bg-gray-800 rounded-2xl p-4 flex flex-col gap-4 border-l-4" style={{ borderColor: interval.color }}>
+                                    
                                     <div className="flex justify-between items-center gap-2">
-                                        <div className="bg-gray-900/50 p-2 rounded-lg text-gray-500 w-full flex items-center">
+                                        <div className="bg-gray-900/50 p-2 rounded-lg text-gray-500 flex-1 flex items-center min-w-0">
                                             <span className="text-xs font-mono opacity-50 mr-2">#{index + 1}</span>
-                                            <input type="text" value={interval.name} onChange={(e) => updateInterval(interval.id, 'name', e.target.value)} className="bg-transparent border-none text-lg font-bold focus:ring-0 focus:outline-none w-full text-white" />
+                                            <input type="text" value={interval.name} onChange={(e) => updateIntervalData(interval.id, 'name', e.target.value)} className="bg-transparent border-none text-lg font-bold focus:ring-0 focus:outline-none w-full text-white min-w-0" />
                                         </div>
-                                        <button onClick={() => removeInterval(interval.id)} disabled={intervals.length === 1} className={`p-2 rounded-full ${intervals.length === 1 ? 'opacity-30' : 'hover:bg-red-500/20 text-red-400'}`}><Trash2 size={18} /></button>
+                                        
+                                        <div className="flex items-center gap-1">
+                                            <button onClick={() => moveInterval(index, -1)} disabled={index === 0} className={`p-2 rounded-full ${index === 0 ? 'opacity-20' : 'hover:bg-gray-700 text-gray-400'}`}><ArrowUp size={16} /></button>
+                                            <button onClick={() => moveInterval(index, 1)} disabled={index === activeScheme.intervals.length - 1} className={`p-2 rounded-full ${index === activeScheme.intervals.length - 1 ? 'opacity-20' : 'hover:bg-gray-700 text-gray-400'}`}><ArrowDown size={16} /></button>
+                                            <button onClick={() => duplicateInterval(interval.id)} className="p-2 rounded-full hover:bg-gray-700 text-blue-400" title="Копировать"><Copy size={16} /></button>
+                                            <button onClick={() => removeInterval(interval.id)} disabled={activeScheme.intervals.length === 1} className={`p-2 rounded-full ${activeScheme.intervals.length === 1 ? 'opacity-30' : 'hover:bg-red-500/20 text-red-400'}`}><Trash2 size={18} /></button>
+                                        </div>
                                     </div>
+
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         <div className="bg-gray-900 rounded-xl p-2 flex flex-col justify-center">
                                             <label className="text-xs text-gray-500 mb-1">Секунды</label>
-                                            <input type="number" value={interval.duration} onChange={(e) => updateInterval(interval.id, 'duration', parseInt(e.target.value) || 0)} className="bg-transparent text-xl font-bold w-full focus:outline-none" />
+                                            <input type="number" value={interval.duration} 
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    updateIntervalData(interval.id, 'duration', val === '' ? '' : parseInt(val));
+                                                }}
+                                                className="bg-transparent text-xl font-bold w-full focus:outline-none" 
+                                            />
                                         </div>
                                         <div className="bg-gray-900 rounded-xl p-2 flex flex-col justify-center relative overflow-hidden">
                                             <label className="text-xs text-gray-500 mb-1">Цвет</label>
                                             <div className="flex items-center gap-2">
                                                 <div className="w-6 h-6 rounded-full shadow-sm" style={{ backgroundColor: interval.color }}></div>
-                                                <input type="color" value={interval.color} onChange={(e) => updateInterval(interval.id, 'color', e.target.value)} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                                                <input type="color" value={interval.color} onChange={(e) => updateIntervalData(interval.id, 'color', e.target.value)} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
                                             </div>
                                         </div>
                                         <div className="col-span-2 bg-gray-900 rounded-xl p-2 flex items-center gap-2">
                                             <div className="flex-1">
                                                 <label className="text-xs text-gray-500 mb-1 block">Звук</label>
-                                                <select value={interval.soundType} onChange={(e) => updateInterval(interval.id, 'soundType', e.target.value)} className="bg-transparent text-sm font-medium focus:outline-none w-full appearance-none text-white [&>option]:bg-gray-800 [&>option]:text-white [&>optgroup]:bg-gray-800 [&>optgroup]:text-white">
+                                                <select value={interval.soundType} onChange={(e) => updateIntervalData(interval.id, 'soundType', e.target.value)} className="bg-transparent text-sm font-medium focus:outline-none w-full appearance-none text-white [&>option]:bg-gray-800 [&>option]:text-white [&>optgroup]:bg-gray-800 [&>optgroup]:text-white">
                                                     <optgroup label="Встроенные" className="bg-gray-800 text-white">
                                                         <option value="low">Низкий (Бип)</option>
                                                         <option value="high">Высокий (Пик)</option>
@@ -450,7 +710,7 @@
                                     </div>
                                 </div>
                             ))}
-                            <button onClick={addInterval} className="w-full py-4 rounded-2xl border-2 border-dashed border-gray-700 text-gray-400 hover:border-blue-500 hover:text-blue-500 transition flex justify-center items-center gap-2"><Plus size={20} /> Добавить этап</button>
+                            <button onClick={addInterval} className="w-full py-4 rounded-2xl border-2 border-dashed border-gray-700 text-gray-400 hover:border-blue-500 hover:text-blue-500 transition flex justify-center items-center gap-2 mb-8"><Plus size={20} /> Добавить этап</button>
                         </div>
                     </div>
                 </div>
