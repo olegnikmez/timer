@@ -491,10 +491,12 @@
                 const newDuration = Number(prevInterval.duration) || 0;
                 setTimeLeft(newDuration);
                 
+                // Звук теперь воспроизводится всегда при переходе (если не выключен звук)
+                if (!isMuted) playSound(prevInterval.soundType, prevInterval.customUrl);
+
                 // Если таймер запущен, продолжаем отсчет с нового места
                 if (status === 'running') {
                     endTimeRef.current = Date.now() + newDuration * 1000;
-                    if (!isMuted) playSound(prevInterval.soundType, prevInterval.customUrl);
                 }
             };
 
