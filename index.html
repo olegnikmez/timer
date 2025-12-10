@@ -34,6 +34,15 @@
         /* Безопасные зоны для телефонов с "челками" */
         .safe-top { padding-top: env(safe-area-inset-top); }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* Скрываем скроллбар для красоты, но оставляем возможность скролла */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white h-screen w-screen overflow-hidden">
@@ -553,7 +562,7 @@
                     <div className="flex flex-col h-screen w-full overflow-hidden transition-colors duration-700 relative"
                         style={{ backgroundColor: status !== 'idle' && status !== 'finished' ? `${currentInterval.color}20` : '#111827' }}>
                         
-                        <div className="flex justify-between items-center p-6 safe-top z-10">
+                        <div className="flex justify-between items-center p-6 safe-top z-10 flex-shrink-0">
                             <div className="flex flex-col">
                                 <span className="text-xs font-bold uppercase tracking-widest text-gray-400">{activeScheme.name}</span>
                                 <div className="text-sm font-medium opacity-70 tracking-widest uppercase">Цикл {currentCycle} / {activeScheme.cycles}</div>
@@ -569,14 +578,30 @@
                             </div>
                         </div>
 
-                        <div className="flex-1 flex flex-col items-center justify-center relative z-0">
-                            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-                                <div className="w-80 h-80 rounded-full border-8 transition-colors duration-500" style={{ borderColor: currentInterval.color || '#333' }}></div>
-                            </div>
-                            <h2 className="text-3xl font-light mb-4 text-center px-4 animate-fade-in">{status === 'finished' ? 'Тренировка завершена!' : currentInterval.name}</h2>
-                            <div className="text-9xl font-bold tracking-tighter tabular-nums mb-4 drop-shadow-2xl" style={{ color: status === 'finished' ? '#10b981' : currentInterval.color }}>{formatTime(timeLeft)}</div>
+                        {/* --- MAIN DISPLAY LAYOUT (Scrollable if too small) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-evenly w-full max-w-md mx-auto px-6 relative z-0 overflow-y-auto no-scrollbar min-h-0">
                             
-                            <div className="flex gap-3 mb-6">
+                            {/* Interval Name */}
+                            <h2 className="text-3xl sm:text-4xl font-light text-center px-4 animate-fade-in z-10 relative mt-4">
+                                {status === 'finished' ? 'Тренировка завершена!' : currentInterval.name}
+                            </h2>
+
+                            {/* Circle Container - Responsive height */}
+                            <div className="relative w-64 h-64 sm:w-80 sm:h-80 max-h-[50vh] aspect-square flex items-center justify-center my-4 shrink-0">
+                                {/* SVG/Border Circle */}
+                                <div className="absolute inset-0 rounded-full border-8 transition-colors duration-500" 
+                                     style={{ borderColor: currentInterval.color || '#333' }}>
+                                </div>
+                                
+                                {/* Time Text */}
+                                <div className="text-7xl sm:text-8xl font-bold tracking-tighter tabular-nums drop-shadow-2xl z-10 select-none" 
+                                     style={{ color: status === 'finished' ? '#10b981' : currentInterval.color }}>
+                                    {formatTime(timeLeft)}
+                                </div>
+                            </div>
+
+                            {/* Add Time Buttons */}
+                            <div className="flex gap-3 z-10 shrink-0 mb-4">
                                 {[1, 2, 3, 5].map(sec => (
                                     <button 
                                         key={sec}
@@ -588,12 +613,14 @@
                                 ))}
                             </div>
 
+                            {/* Next Interval Preview */}
                             {status !== 'finished' && activeScheme.intervals.length > 0 && (
-                                <div className="text-gray-400 text-sm bg-gray-800/50 px-4 py-2 rounded-full backdrop-blur-sm">Далее: {activeScheme.intervals[(currentIntervalIndex + 1) % activeScheme.intervals.length].name}</div>
+                                <div className="text-gray-400 text-sm bg-gray-800/50 px-4 py-2 rounded-full backdrop-blur-sm mb-4 shrink-0">Далее: {activeScheme.intervals[(currentIntervalIndex + 1) % activeScheme.intervals.length].name}</div>
                             )}
                         </div>
 
-                        <div className="p-8 pb-12 flex justify-center items-center gap-6 safe-bottom z-10">
+                        {/* Controls - Always visible, never shrinks */}
+                        <div className="pb-8 pt-4 flex justify-center items-center gap-6 safe-bottom z-10 w-full flex-shrink-0 bg-gray-900/10 backdrop-blur-sm">
                             {/* SKIP BACK */}
                             <button onClick={handleSkipBackward} className="w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition text-blue-400">
                                 <SkipBack size={24} fill="currentColor" />
@@ -614,7 +641,9 @@
                                 <RotateCcw size={24} />
                             </button>
                         </div>
-                        <div className="h-2 bg-gray-800 w-full relative z-10">
+                        
+                        {/* Background Progress Bar */}
+                        <div className="h-2 bg-gray-800 w-full absolute bottom-0 z-10">
                             <div className="h-full transition-all duration-100 ease-linear" style={{ width: `${progressPercent}%`, backgroundColor: currentInterval.color }} />
                         </div>
                     </div>
