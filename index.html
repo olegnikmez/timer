@@ -404,11 +404,14 @@
             };
 
             const resetTimer = () => {
-                pauseTimer();
-                setStatus('idle');
+                pauseTimer(); // Cleans up wakeLock and raf, sets 'paused'
+                setStatus('idle'); // Overrides to 'idle'
                 setCurrentCycle(1);
                 setCurrentIntervalIndex(0);
-                // Timeleft обновится через useEffect
+                
+                // Исправление: принудительно сбрасываем время, чтобы убрать добавленные секунды
+                const firstInterval = activeScheme.intervals[0];
+                setTimeLeft(firstInterval ? (Number(firstInterval.duration) || 0) : 0);
             };
 
             const addSeconds = (amount) => {
