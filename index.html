@@ -10,7 +10,7 @@
     <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
         
-    <script src="https://unpkg.com/@babel/standalone@7.23.12/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.21.4/babel.min.js"></script>
         
     <style>
         body {
@@ -28,10 +28,14 @@
 <body class="bg-gray-900 text-white">
     <div id="root" class="h-full w-full"></div>
 
-    <script type="text/babel" data-presets="react,env">
+    <script type="text/babel">
+        /** @jsx React.createElement */
+        
+        console.log("Компиляция Babel успешна. Приложение запускается...");
+
         const { useState, useEffect, useRef, useCallback } = React;
 
-        // ФИКС 4: Безопасные обертки для хранилища (защита от краша в Инкогнито)
+        // Безопасные обертки для хранилища
         const safeGetStorage = (key) => {
             try { return localStorage.getItem(key); } catch (e) { return null; }
         };
@@ -115,8 +119,7 @@
             } catch (err) {}
         };
 
-        // --- SOUND ENGINE (FIXED: SINGLETON CONTEXT) ---
-        // Создаем глобальную переменную для контекста
+        // --- SOUND ENGINE ---
         let sharedAudioCtx = null;
 
         const getAudioContext = () => {
@@ -136,11 +139,9 @@
                 return;
             }
 
-            // Используем общий контекст вместо создания нового
             const ctx = getAudioContext();
             if (!ctx) return;
             
-            // Если контекст "спит" (браузеры останавливают его при неактивности), будим его
             if (ctx.state === 'suspended') {
                 ctx.resume();
             }
@@ -222,18 +223,18 @@
 
         // --- MAIN APP COMPONENT ---
         function ChronoFlexTimer() {
-            // 1. Инициализация Схем с проверкой на битые данные
             const [schemes, setSchemes] = useState(() => {
                 const savedSchemes = safeGetStorage('chrono_schemes');
                 if (savedSchemes) {
                     try { 
                         const parsed = JSON.parse(savedSchemes);
-                        // Проверяем, что это массив и он не пустой
                         if (Array.isArray(parsed) && parsed.length > 0) return parsed; 
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error("Ошибка парсинга схем:", e);
+                    }
                 }
                 
-                const oldIntervals = safeGetStorage('chrono_intervals');
+                const oldIntervalsRaw = safeGetStorage('chrono_intervals');
                 const oldCycles = safeGetStorage('chrono_cycles');
                 
                 const defaultIntervals = [
@@ -242,21 +243,32 @@
                     { id: 3, name: 'Отдых', duration: 15, color: '#3b82f6', soundType: 'low', customUrl: null }
                 ];
 
+                // Безопасный парсинг старых интервалов
+                let parsedOldIntervals = null;
+                if (oldIntervalsRaw) {
+                    try {
+                        const parsed = JSON.parse(oldIntervalsRaw);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            parsedOldIntervals = parsed;
+                        }
+                    } catch (e) {
+                        console.error("Поврежденные данные интервалов, используем дефолтные", e);
+                    }
+                }
+
                 return [{
                     id: Date.now(),
                     name: 'Моя тренировка',
                     cycles: oldCycles ? parseInt(oldCycles) : 1,
-                    intervals: oldIntervals ? JSON.parse(oldIntervals) : defaultIntervals
+                    intervals: parsedOldIntervals || defaultIntervals
                 }];
             });
 
-            // 2. Инициализация активной схемы
             const [activeSchemeId, setActiveSchemeId] = useState(() => {
                 const lastId = safeGetStorage('chrono_active_scheme_id');
                 return lastId ? parseInt(lastId) : null;
             });
 
-            // 3. Состояние Mute
             const [isMuted, setIsMuted] = useState(() => {
                 return safeGetStorage('chrono_is_muted') === 'true';
             });
@@ -282,8 +294,7 @@
                 safeSetStorage('chrono_active_scheme_id', activeScheme.id.toString());
             }, [schemes, activeScheme]);
 
-            // --- Helper Functions для управления схемами ---
-
+            // --- Управление схемами ---
             const updateActiveScheme = (updates) => {
                 setSchemes(prevSchemes => 
                     prevSchemes.map(s => s.id === activeScheme.id ? { ...s, ...updates } : s)
@@ -303,11 +314,11 @@
                 };
                 setSchemes([...schemes, newScheme]);
                 setActiveSchemeId(newId);
-                resetTimer(); // Сбрасываем таймер при смене схемы
+                resetTimer(); 
             };
 
             const deleteActiveScheme = () => {
-                if (schemes.length <= 1) return; // Нельзя удалить последнюю
+                if (schemes.length <= 1) return; 
                 const newSchemes = schemes.filter(s => s.id !== activeScheme.id);
                 setSchemes(newSchemes);
                 setActiveSchemeId(newSchemes[0].id);
@@ -319,19 +330,17 @@
                 resetTimer();
             };
 
-            // --- ОБЫЧНЫЙ STATE ТАЙМЕРА (Сбрасывается при смене схемы) ---
             const [currentCycle, setCurrentCycle] = useState(1);
             const [currentIntervalIndex, setCurrentIntervalIndex] = useState(0);
             const [timeLeft, setTimeLeft] = useState(0);
             const [status, setStatus] = useState('idle');
             const [mode, setMode] = useState('timer');
-            const [isSchemeListOpen, setIsSchemeListOpen] = useState(false); // Для выпадающего списка схем
+            const [isSchemeListOpen, setIsSchemeListOpen] = useState(false); 
 
             const endTimeRef = useRef(null);
             const rafRef = useRef(null);
             const wakeLockRef = useRef(null);
 
-            // Эффект обновления времени при смене активной схемы/интервалов
             useEffect(() => {
                 if (status === 'idle') {
                     const firstInterval = activeScheme.intervals[0];
@@ -340,7 +349,6 @@
             }, [activeScheme, status]);
 
 
-            // Восстановление аудио для ВСЕХ интервалов текущей схемы
             useEffect(() => {
                 const restoreAudio = async () => {
                     let hasChanges = false;
@@ -366,7 +374,7 @@
                     }
                 };
                 restoreAudio();
-            }, [activeSchemeId]); // Запускаем при смене схемы
+            }, [activeSchemeId]); 
 
 
             const requestWakeLock = async () => {
@@ -379,7 +387,6 @@
                 requestWakeLock();
                 endTimeRef.current = Date.now() + (Number(timeLeft) || 0) * 1000;
                 
-                // Проигрываем звук если это начало
                 const originalDuration = Number(activeScheme.intervals[currentIntervalIndex].duration) || 0;
                 if (timeLeft === originalDuration && !isMuted) {
                     const current = activeScheme.intervals[currentIntervalIndex];
@@ -394,12 +401,11 @@
             };
 
             const resetTimer = () => {
-                pauseTimer(); // Cleans up wakeLock and raf, sets 'paused'
-                setStatus('idle'); // Overrides to 'idle'
+                pauseTimer(); 
+                setStatus('idle'); 
                 setCurrentCycle(1);
                 setCurrentIntervalIndex(0);
                 
-                // Исправление: принудительно сбрасываем время, чтобы убрать добавленные секунды
                 const firstInterval = activeScheme.intervals[0];
                 setTimeLeft(firstInterval ? (Number(firstInterval.duration) || 0) : 0);
             };
@@ -457,12 +463,7 @@
                 }
             };
 
-            // --- NAVIGATION (Skip Backward/Forward) ---
             const handleSkipBackward = () => {
-                // Логика: если есть предыдущий интервал, идем к нему.
-                // Если это первый интервал цикла, но цикл > 1, идем к последнему интервалу предыдущего цикла.
-                // Иначе просто сбрасываем время в начало.
-                
                 let newIndex = currentIntervalIndex - 1;
                 let newCycle = currentCycle;
 
@@ -471,7 +472,6 @@
                         newCycle = currentCycle - 1;
                         newIndex = activeScheme.intervals.length - 1;
                     } else {
-                        // Самое начало тренировки - просто сброс
                         resetTimer();
                         return;
                     }
@@ -484,16 +484,12 @@
                 const newDuration = Number(prevInterval.duration) || 0;
                 setTimeLeft(newDuration);
                 
-                // Звук теперь воспроизводится всегда при переходе (если не выключен звук)
                 if (!isMuted) playSound(prevInterval.soundType, prevInterval.customUrl);
 
-                // Если таймер запущен, продолжаем отсчет с нового места
                 if (status === 'running') {
                     endTimeRef.current = Date.now() + newDuration * 1000;
                 }
             };
-
-            // --- Scheme Data Modifiers (Wrapped activeScheme updaters) ---
 
             const addInterval = () => {
                 const newId = Date.now();
@@ -555,8 +551,6 @@
             const safeDuration = Number(currentInterval.duration) || 1; 
             const progressPercent = status === 'idle' ? 100 : (timeLeft / safeDuration) * 100;
 
-            // --- RENDER ---
-
             if (mode === 'timer') {
                 return (
                     <div className="flex flex-col h-full w-full overflow-hidden transition-colors duration-700 relative"
@@ -578,29 +572,23 @@
                             </div>
                         </div>
 
-                        {/* --- MAIN DISPLAY LAYOUT (Scrollable if too small) --- */}
                         <div className="flex-1 flex flex-col items-center justify-evenly w-full max-w-md mx-auto px-6 relative z-0 overflow-y-auto no-scrollbar min-h-0">
                             
-                            {/* Interval Name */}
                             <h2 className="text-3xl sm:text-4xl font-light text-center px-4 animate-fade-in z-10 relative mt-4">
                                 {status === 'finished' ? 'Тренировка завершена!' : currentInterval.name}
                             </h2>
 
-                            {/* Circle Container - Responsive height */}
                             <div className="relative w-64 h-64 sm:w-80 sm:h-80 max-h-[50vh] aspect-square flex items-center justify-center my-4 shrink-0">
-                                {/* SVG/Border Circle */}
                                 <div className="absolute inset-0 rounded-full border-8 transition-colors duration-500" 
                                      style={{ borderColor: currentInterval.color || '#333' }}>
                                 </div>
                                 
-                                {/* Time Text */}
                                 <div className="text-7xl sm:text-8xl font-bold tracking-tighter tabular-nums drop-shadow-2xl z-10 select-none" 
                                      style={{ color: status === 'finished' ? '#10b981' : currentInterval.color }}>
                                     {formatTime(timeLeft)}
                                 </div>
                             </div>
 
-                            {/* Add Time Buttons */}
                             <div className="flex gap-3 z-10 shrink-0 mb-4">
                                 {[1, 2, 3, 5].map(sec => (
                                     <button 
@@ -613,15 +601,12 @@
                                 ))}
                             </div>
 
-                            {/* Next Interval Preview */}
                             {status !== 'finished' && activeScheme.intervals.length > 0 && (
                                 <div className="text-gray-400 text-sm bg-gray-800/50 px-4 py-2 rounded-full backdrop-blur-sm mb-4 shrink-0">Далее: {activeScheme.intervals[(currentIntervalIndex + 1) % activeScheme.intervals.length].name}</div>
                             )}
                         </div>
 
-                        {/* Controls - Always visible, never shrinks */}
                         <div className="pb-6 pt-4 flex justify-center items-center gap-6 safe-bottom z-10 w-full flex-shrink-0 bg-gray-900/10 backdrop-blur-sm">
-                            {/* SKIP BACK */}
                             <button onClick={handleSkipBackward} className="w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition text-blue-400">
                                 <SkipBack size={24} fill="currentColor" />
                             </button>
@@ -632,7 +617,6 @@
                                 <button onClick={startTimer} className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition"><Play size={32} fill="currentColor" className="ml-1 text-black" /></button>
                             )}
                             
-                            {/* SKIP FORWARD */}
                             <button onClick={handleIntervalComplete} className="w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition text-blue-400">
                                 <SkipForward size={24} fill="currentColor" />
                             </button>
@@ -642,7 +626,6 @@
                             </button>
                         </div>
                         
-                        {/* Background Progress Bar */}
                         <div className="h-2 bg-gray-800 w-full absolute bottom-0 z-10">
                             <div className="h-full transition-all duration-100 ease-linear" style={{ width: `${progressPercent}%`, backgroundColor: currentInterval.color }} />
                         </div>
@@ -659,7 +642,6 @@
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-40 safe-bottom">
                         
-                        {/* SCHEME SELECTOR */}
                         <div className="bg-gray-800 rounded-2xl p-2 relative z-20">
                              <div 
                                 className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-700/50 rounded-xl transition"
@@ -693,7 +675,6 @@
                              )}
                         </div>
 
-                        {/* SCHEME PROPERTIES */}
                         <div className="bg-gray-800/50 p-4 rounded-2xl border border-gray-700/50">
                             <div className="flex gap-2 mb-4">
                                 <div className="flex-1">
@@ -735,7 +716,6 @@
                             </div>
                         </div>
 
-                        {/* INTERVALS LIST */}
                         <div className="space-y-4">
                             <div className="flex justify-between items-end px-1"><span className="text-gray-400 text-xs uppercase tracking-wider font-bold">Интервалы</span></div>
                             {activeScheme.intervals.map((interval, index) => (
