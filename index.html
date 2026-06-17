@@ -4,57 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ChronoFlex Pro</title>
-    
-    <!-- Подключаем стили Tailwind (Дизайн) -->
+        
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Подключаем React и ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel (чтобы браузер понял современный код) -->
+        
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+        
     <script src="https://unpkg.com/@babel/standalone@7.23.12/babel.min.js"></script>
-    
+        
     <style>
-        /* Отключаем выделение текста на мобильных для ощущения приложения */
         body {
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            background-color: #111827; /* bg-gray-900 */
-            /* CRITICAL FIX: Используем dynamic viewport height для мобильных браузеров */
-            height: 100vh;
-            height: 100dvh; 
-            width: 100vw;
-            overflow: hidden;
+            -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+            background-color: #111827; height: 100vh; height: 100dvh; width: 100vw; overflow: hidden;
         }
-        /* Анимации */
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fade-in 0.5s ease-out forwards;
-        }
-        /* Безопасные зоны для телефонов с "челками" */
+        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
         .safe-top { padding-top: env(safe-area-inset-top); }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-        
-        /* Скрываем скроллбар для красоты, но оставляем возможность скролла */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
     <div id="root" class="h-full w-full"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="react,env">
         const { useState, useEffect, useRef, useCallback } = React;
+
+        // ФИКС 4: Безопасные обертки для хранилища (защита от краша в Инкогнито)
+        const safeGetStorage = (key) => {
+            try { return localStorage.getItem(key); } catch (e) { return null; }
+        };
+        const safeSetStorage = (key, value) => {
+            try { localStorage.setItem(key, value); } catch (e) {}
+        };
 
         // --- ВСТРОЕННЫЕ ИКОНКИ ---
         const Icons = {
@@ -239,18 +222,19 @@
 
         // --- MAIN APP COMPONENT ---
         function ChronoFlexTimer() {
-            // --- STATE MANAGEMENT WITH SCHEMES ---
-            
-            // 1. Инициализация Схем
+            // 1. Инициализация Схем с проверкой на битые данные
             const [schemes, setSchemes] = useState(() => {
-                const savedSchemes = localStorage.getItem('chrono_schemes');
+                const savedSchemes = safeGetStorage('chrono_schemes');
                 if (savedSchemes) {
-                    try { return JSON.parse(savedSchemes); } catch (e) {}
+                    try { 
+                        const parsed = JSON.parse(savedSchemes);
+                        // Проверяем, что это массив и он не пустой
+                        if (Array.isArray(parsed) && parsed.length > 0) return parsed; 
+                    } catch (e) {}
                 }
                 
-                // Миграция данных старых пользователей
-                const oldIntervals = localStorage.getItem('chrono_intervals');
-                const oldCycles = localStorage.getItem('chrono_cycles');
+                const oldIntervals = safeGetStorage('chrono_intervals');
+                const oldCycles = safeGetStorage('chrono_cycles');
                 
                 const defaultIntervals = [
                     { id: 1, name: 'Разминка', duration: 10, color: '#10b981', soundType: 'low', customUrl: null },
@@ -258,58 +242,45 @@
                     { id: 3, name: 'Отдых', duration: 15, color: '#3b82f6', soundType: 'low', customUrl: null }
                 ];
 
-                const initialScheme = {
+                return [{
                     id: Date.now(),
                     name: 'Моя тренировка',
                     cycles: oldCycles ? parseInt(oldCycles) : 1,
                     intervals: oldIntervals ? JSON.parse(oldIntervals) : defaultIntervals
-                };
-
-                return [initialScheme];
+                }];
             });
 
             // 2. Инициализация активной схемы
             const [activeSchemeId, setActiveSchemeId] = useState(() => {
-                const lastId = localStorage.getItem('chrono_active_scheme_id');
-                // Проверяем, существует ли схема с таким ID
-                if (lastId) {
-                    // Так как мы пока не можем обратиться к state `schemes` внутри инициализатора,
-                    // мы доверяем ID, но сделаем проверку в рендере или useEffect
-                    return parseInt(lastId);
-                }
-                return null; // Будет установлено в useEffect
+                const lastId = safeGetStorage('chrono_active_scheme_id');
+                return lastId ? parseInt(lastId) : null;
             });
 
-            // 3. Состояние Mute (Глобальный звук)
+            // 3. Состояние Mute
             const [isMuted, setIsMuted] = useState(() => {
-                return localStorage.getItem('chrono_is_muted') === 'true';
+                return safeGetStorage('chrono_is_muted') === 'true';
             });
 
             useEffect(() => {
-                localStorage.setItem('chrono_is_muted', isMuted);
+                safeSetStorage('chrono_is_muted', isMuted);
             }, [isMuted]);
 
-            // Вычисляемая активная схема. Если ID некорректен, берем первую.
             const activeScheme = schemes.find(s => s.id === activeSchemeId) || schemes[0];
             
-            // Синхронизация: если activeSchemeId был null или неверный, обновляем его
             useEffect(() => {
                 if (!activeSchemeId || !schemes.find(s => s.id === activeSchemeId)) {
                     setActiveSchemeId(schemes[0].id);
                 }
             }, [schemes, activeSchemeId]);
 
-            // Сохранение в LocalStorage
             useEffect(() => {
-                // Сохраняем схемы без blob url
                 const schemesToSave = schemes.map(scheme => ({
                     ...scheme,
                     intervals: scheme.intervals.map(i => ({ ...i, customUrl: null }))
                 }));
-                localStorage.setItem('chrono_schemes', JSON.stringify(schemesToSave));
-                localStorage.setItem('chrono_active_scheme_id', activeScheme.id.toString());
+                safeSetStorage('chrono_schemes', JSON.stringify(schemesToSave));
+                safeSetStorage('chrono_active_scheme_id', activeScheme.id.toString());
             }, [schemes, activeScheme]);
-
 
             // --- Helper Functions для управления схемами ---
 
